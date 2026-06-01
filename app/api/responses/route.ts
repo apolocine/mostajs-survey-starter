@@ -16,6 +16,16 @@ function rating(form: FormData, key: string): number | null {
   return Number.isInteger(n) && n >= 1 && n <= 5 ? n : null;
 }
 
+/**
+ * 303 avec un `Location` RELATIF. Le navigateur le résout contre l'URL publique
+ * de la requête → marche en WebContainer (StackBlitz/Bolt) et derrière un proxy.
+ * Une URL absolue (`new URL(path, req.url)`) pointerait sur le bind interne
+ * `localhost` car le WebContainer ne transmet pas l'hôte public au serveur.
+ */
+function see(location: string): NextResponse {
+  return new NextResponse(null, { status: 303, headers: { Location: location } });
+}
+
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const ratingGlobal = rating(form, 'ratingGlobal');
@@ -25,7 +35,7 @@ export async function POST(req: NextRequest) {
   const comment = String(form.get('comment') ?? '').trim();
 
   if (ratingGlobal === null || ratingQuality === null || ratingStaff === null || ratingValue === null) {
-    return NextResponse.redirect(new URL('/survey?error=1', req.url), 303);
+    return see('/survey?error=1');
   }
 
   const { responses } = await getRepos();
@@ -37,5 +47,5 @@ export async function POST(req: NextRequest) {
     ...(comment ? { comment } : {}),
   });
 
-  return NextResponse.redirect(new URL('/thanks', req.url), 303);
+  return see('/thanks');
 }
